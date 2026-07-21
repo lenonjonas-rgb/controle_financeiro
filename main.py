@@ -215,15 +215,11 @@ def main(page: ft.Page):
         page.update()
 
     # ------------------------------------------
-    # NAVEGAÇÃO RESPONSIVA
+    # NAVEGAÇÃO
     # ------------------------------------------
     def mudar_tela_interface(indice_aba):
-        if barra_lateral:
-            barra_lateral.selected_index = indice_aba
-            barra_lateral.update()
-        if barra_inferior:
-            barra_inferior.selected_index = indice_aba
-            barra_inferior.update()
+        barra_lateral.selected_index = indice_aba
+        barra_lateral.update()
 
         conteudo_central.controls.clear()
         
@@ -234,24 +230,13 @@ def main(page: ft.Page):
             
         page.update()
 
-    # Menu Lateral para Computadores
     barra_lateral = ft.NavigationRail(
         selected_index=0,
         label_type=ft.NavigationRailLabelType.ALL,
-        min_width=100,
+        min_width=80,
         destinations=[
             ft.NavigationRailDestination(icon=ft.icons.ADD_CARD, label="Novo"),
             ft.NavigationRailDestination(icon=ft.icons.ANALYTICS, label="Relatórios"),
-        ],
-        on_change=lambda e: mudar_tela_interface(e.control.selected_index),
-    )
-
-    # Menu Inferior para Celulares
-    barra_inferior = ft.NavigationBar(
-        selected_index=0,
-        destinations=[
-            ft.NavigationDestination(icon=ft.icons.ADD_CARD, label="Novo Lançamento"),
-            ft.NavigationDestination(icon=ft.icons.ANALYTICS, label="Relatórios"),
         ],
         on_change=lambda e: mudar_tela_interface(e.control.selected_index),
     )
@@ -268,7 +253,6 @@ def main(page: ft.Page):
                 ft.Text("Preencha os dados da transação abaixo.", size=13, color=ft.colors.GREY_400),
                 ft.Divider(),
                 
-                # Bloco de Data e Atalhos (Responsivo)
                 ft.ResponsiveRow([
                     ft.Column([input_data], col={"xs": 12, "sm": 6}),
                     ft.Column([
@@ -280,18 +264,15 @@ def main(page: ft.Page):
                     ], col={"xs": 12, "sm": 6}),
                 ]),
                 
-                # Bloco de Tipo e Categoria
                 ft.ResponsiveRow([
                     ft.Column([input_tipo], col={"xs": 12, "sm": 6}),
                     ft.Column([input_categoria], col={"xs": 12, "sm": 6}),
                 ]),
 
-                # Bloco do Valor
                 ft.ResponsiveRow([
                     ft.Column([input_valor], col={"xs": 12, "sm": 6}),
                 ]),
                 
-                # Bloco de Empresa e Histórico
                 ft.ResponsiveRow([
                     ft.Column([input_empresa], col={"xs": 12, "sm": 7}),
                     ft.Column([dropdown_empresas], col={"xs": 12, "sm": 5}),
@@ -299,7 +280,6 @@ def main(page: ft.Page):
                 
                 ft.Container(height=15),
                 
-                # Botão Salvar (Largura total no celular)
                 ft.ResponsiveRow([
                     ft.Column([
                         ft.ElevatedButton(
@@ -481,7 +461,6 @@ def main(page: ft.Page):
                 expand=True
             )
 
-            # Cards de resumo com clique
             card_entradas = ft.Container(
                 on_click=lambda _: abrir_detalhes_movimentacao("entrada", "Detalhamento de Entradas", ft.colors.GREEN_400),
                 ink=True,
@@ -519,7 +498,6 @@ def main(page: ft.Page):
 
             container_dashboard.controls.clear()
             container_dashboard.controls.extend([
-                # Cards do topo em grid adaptativo
                 ft.ResponsiveRow([
                     ft.Column([card_entradas], col={"xs": 12, "sm": 4}),
                     ft.Column([card_saidas], col={"xs": 12, "sm": 4}),
@@ -528,7 +506,6 @@ def main(page: ft.Page):
                 ft.Divider(),
                 ft.Text("Gastos Por Categoria", size=18, weight=ft.FontWeight.BOLD),
                 
-                # Tabela + Gráfico empilhados no celular
                 ft.ResponsiveRow([
                     ft.Column([
                         ft.ListView(controls=[tabela_categorias], expand=False)
@@ -542,7 +519,6 @@ def main(page: ft.Page):
             if page:
                 page.update()
 
-        # Navegação de Meses
         def mes_anterior(e):
             primeiro_dia = data_referencia[0].replace(day=1)
             data_referencia[0] = primeiro_dia - timedelta(days=1)
@@ -576,23 +552,25 @@ def main(page: ft.Page):
             padding=15
         )
 
-    # Inicialização da Layout da Página
+    # Inicialização Estável para Web
     conteudo_central.controls.append(criar_tela_formulario())
     
-    # Renderização Adaptativa: Se for tela pequena usa navegação inferior, se for grande usa lateral
-    def reordenar_layout():
-        page.controls.clear()
-        if page.width and page.width < 600:
-            page.navigation_bar = barra_inferior
-            page.add(conteudo_central)
-        else:
-            page.navigation_bar = None
-            page.add(ft.Row([barra_lateral, ft.VerticalDivider(width=1), conteudo_central], expand=True))
-        page.update()
-
-    page.on_resize = lambda e: reordenar_layout()
-    reordenar_layout()
+    page.add(
+        ft.Row(
+            [
+                barra_lateral, 
+                ft.VerticalDivider(width=1), 
+                conteudo_central
+            ], 
+            expand=True
+        )
+    )
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=port, host="0.0.0.0")
+    ft.app(
+        target=main, 
+        view=ft.AppView.WEB_BROWSER, 
+        port=port, 
+        host="0.0.0.0"
+    )
