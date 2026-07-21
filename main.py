@@ -537,5 +537,8 @@ def main(page: ft.Page):
     conteudo_central.controls.append(criar_tela_formulario())
     page.add(ft.Row([barra_lateral, ft.VerticalDivider(width=1), conteudo_central], expand=True))
 
+import os
+
 if __name__ == "__main__":
-    ft.app(target=main)
+    port = int(os.environ.get("PORT", 8080))
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=port, host="0.0.0.0")
