@@ -1,6 +1,7 @@
 import flet as ft
 import sqlite3
 from datetime import datetime, timedelta
+import os
 
 # ==========================================
 # 1. BANCO DE DADOS (PERSISTÊNCIA & MEMÓRIA)
@@ -67,13 +68,13 @@ def buscar_empresas_salvas():
     return [r[0] for r in linhas]
 
 # ==========================================
-# 2. APLICAÇÃO VISUAL (FLET DASHBOARD)
+# 2. APLICAÇÃO VISUAL (FLET DASHBOARD RESPONSIVO)
 # ==========================================
 def main(page: ft.Page):
     page.title = "Controle Financeiro - Gestão & Gráficos"
-    page.window_width = 1000
-    page.window_height = 800
     page.theme_mode = ft.ThemeMode.DARK
+    page.padding = 10
+    page.scroll = ft.ScrollMode.ADAPTIVE
     
     inicializar_banco()
 
@@ -85,8 +86,8 @@ def main(page: ft.Page):
     input_data = ft.TextField(
         label="1. Data da Transação", 
         value=data_hoje, 
-        width=200,
-        hint_text="DD/MM/AAAA"
+        hint_text="DD/MM/AAAA",
+        expand=True
     )
 
     def set_data_hoje(e):
@@ -108,17 +109,16 @@ def main(page: ft.Page):
 
     input_tipo = ft.Dropdown(
         label="2. Tipo de Movimentação",
-        width=220,
         options=[
             ft.dropdown.Option("saida", text="Saída (-)"),
             ft.dropdown.Option("entrada", text="Entrada (+)"),
         ],
-        value="saida"
+        value="saida",
+        expand=True
     )
 
     input_categoria = ft.Dropdown(
         label="3. Categoria",
-        width=350,
         options=[
             ft.dropdown.Option("Alimentação"),
             ft.dropdown.Option("Transporte / Veículos"),
@@ -129,20 +129,21 @@ def main(page: ft.Page):
             ft.dropdown.Option("Fornecedores / Materiais"),
             ft.dropdown.Option("Receita / Salário / Vendas"),
             ft.dropdown.Option("Outros"),
-        ]
+        ],
+        expand=True
     )
 
     input_valor = ft.TextField(
         label="4. Valor (R$)", 
-        width=220, 
         hint_text="Ex: 150,00",
-        keyboard_type=ft.KeyboardType.NUMBER
+        keyboard_type=ft.KeyboardType.NUMBER,
+        expand=True
     )
 
     input_empresa = ft.TextField(
-        label="5. Empresa / Estabelecimento / Favorecido", 
-        expand=True,
-        hint_text="Digite o nome..."
+        label="5. Empresa / Favorecido", 
+        hint_text="Digite o nome...",
+        expand=True
     )
 
     def carregar_opcoes_empresas():
@@ -156,10 +157,10 @@ def main(page: ft.Page):
 
     dropdown_empresas = ft.Dropdown(
         label="Histórico de Empresas",
-        width=250,
         options=carregar_opcoes_empresas(),
         on_change=selecionar_empresa_historico,
-        hint_text="Selecionar salva..."
+        hint_text="Selecionar salva...",
+        expand=True
     )
 
     # ------------------------------------------
@@ -203,8 +204,6 @@ def main(page: ft.Page):
             dropdown_empresas.value = None
             dropdown_empresas.options = carregar_opcoes_empresas()
             
-            barra_lateral.selected_index = 1
-            barra_lateral.update()
             mudar_tela_interface(1)
 
         except Exception as erro:
@@ -216,9 +215,16 @@ def main(page: ft.Page):
         page.update()
 
     # ------------------------------------------
-    # NAVEGAÇÃO
+    # NAVEGAÇÃO RESPONSIVA
     # ------------------------------------------
     def mudar_tela_interface(indice_aba):
+        if barra_lateral:
+            barra_lateral.selected_index = indice_aba
+            barra_lateral.update()
+        if barra_inferior:
+            barra_inferior.selected_index = indice_aba
+            barra_inferior.update()
+
         conteudo_central.controls.clear()
         
         if indice_aba == 0:
@@ -228,13 +234,24 @@ def main(page: ft.Page):
             
         page.update()
 
+    # Menu Lateral para Computadores
     barra_lateral = ft.NavigationRail(
         selected_index=0,
         label_type=ft.NavigationRailLabelType.ALL,
-        min_width=110,
+        min_width=100,
         destinations=[
-            ft.NavigationRailDestination(icon=ft.icons.ADD_CARD, label="1. Novo Lançamento"),
-            ft.NavigationRailDestination(icon=ft.icons.ANALYTICS, label="2. Relatórios Mensais"),
+            ft.NavigationRailDestination(icon=ft.icons.ADD_CARD, label="Novo"),
+            ft.NavigationRailDestination(icon=ft.icons.ANALYTICS, label="Relatórios"),
+        ],
+        on_change=lambda e: mudar_tela_interface(e.control.selected_index),
+    )
+
+    # Menu Inferior para Celulares
+    barra_inferior = ft.NavigationBar(
+        selected_index=0,
+        destinations=[
+            ft.NavigationDestination(icon=ft.icons.ADD_CARD, label="Novo Lançamento"),
+            ft.NavigationDestination(icon=ft.icons.ANALYTICS, label="Relatórios"),
         ],
         on_change=lambda e: mudar_tela_interface(e.control.selected_index),
     )
@@ -242,59 +259,78 @@ def main(page: ft.Page):
     conteudo_central = ft.Column(expand=True, alignment=ft.MainAxisAlignment.START)
 
     # ------------------------------------------
-    # TELA 1: CADASTRO
+    # TELA 1: CADASTRO RESPONSIVO
     # ------------------------------------------
     def criar_tela_formulario():
         return ft.Container(
             content=ft.Column([
-                ft.Text("Novo Lançamento Financeiro", size=24, weight=ft.FontWeight.BOLD),
-                ft.Text("Preencha os dados da transação abaixo.", size=14, color=ft.colors.GREY_400),
+                ft.Text("Novo Lançamento Financeiro", size=22, weight=ft.FontWeight.BOLD),
+                ft.Text("Preencha os dados da transação abaixo.", size=13, color=ft.colors.GREY_400),
                 ft.Divider(),
                 
-                ft.Row([
-                    input_data,
-                    ft.OutlinedButton("Hoje", on_click=set_data_hoje),
-                    ft.OutlinedButton("Ontem", on_click=set_data_ontem),
-                    ft.IconButton(icon=ft.icons.CALENDAR_MONTH, on_click=lambda _: date_picker.pick_date()),
-                ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                # Bloco de Data e Atalhos (Responsivo)
+                ft.ResponsiveRow([
+                    ft.Column([input_data], col={"xs": 12, "sm": 6}),
+                    ft.Column([
+                        ft.Row([
+                            ft.OutlinedButton("Hoje", on_click=set_data_hoje),
+                            ft.OutlinedButton("Ontem", on_click=set_data_ontem),
+                            ft.IconButton(icon=ft.icons.CALENDAR_MONTH, on_click=lambda _: date_picker.pick_date()),
+                        ], alignment=ft.MainAxisAlignment.START)
+                    ], col={"xs": 12, "sm": 6}),
+                ]),
                 
-                ft.Row([input_tipo, input_categoria], spacing=20),
-                ft.Row([input_valor]),
+                # Bloco de Tipo e Categoria
+                ft.ResponsiveRow([
+                    ft.Column([input_tipo], col={"xs": 12, "sm": 6}),
+                    ft.Column([input_categoria], col={"xs": 12, "sm": 6}),
+                ]),
+
+                # Bloco do Valor
+                ft.ResponsiveRow([
+                    ft.Column([input_valor], col={"xs": 12, "sm": 6}),
+                ]),
                 
-                ft.Row([
-                    input_empresa,
-                    dropdown_empresas
-                ], spacing=15),
+                # Bloco de Empresa e Histórico
+                ft.ResponsiveRow([
+                    ft.Column([input_empresa], col={"xs": 12, "sm": 7}),
+                    ft.Column([dropdown_empresas], col={"xs": 12, "sm": 5}),
+                ]),
                 
                 ft.Container(height=15),
                 
-                ft.ElevatedButton(
-                    "Salvar e Arquivar Lançamento", 
-                    icon=ft.icons.SAVE, 
-                    style=ft.ButtonStyle(
-                        bgcolor=ft.colors.GREEN_700,
-                        color=ft.colors.WHITE,
-                        padding=20
-                    ),
-                    on_click=executar_salvamento
-                )
+                # Botão Salvar (Largura total no celular)
+                ft.ResponsiveRow([
+                    ft.Column([
+                        ft.ElevatedButton(
+                            "Salvar e Arquivar Lançamento", 
+                            icon=ft.icons.SAVE, 
+                            style=ft.ButtonStyle(
+                                bgcolor=ft.colors.GREEN_700,
+                                color=ft.colors.WHITE,
+                                padding=20
+                            ),
+                            on_click=executar_salvamento,
+                            width=1000
+                        )
+                    ], col={"xs": 12})
+                ])
             ], spacing=15),
-            padding=30
+            padding=15
         )
 
     # ------------------------------------------
-    # TELA 2: RELATÓRIOS MENSAIS COM NAVEGAÇÃO DINÂMICA
+    # TELA 2: RELATÓRIOS MENSAIS RESPONSIVOS
     # ------------------------------------------
     def criar_tela_relatorio():
-        data_referencia = [datetime.now()] # Usando lista para alteração por referência
+        data_referencia = [datetime.now()]
 
-        # Texto visual do mês atual
         meses_extenso = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
                          "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
         
         texto_mes_ano = ft.Text(
             f"{meses_extenso[data_referencia[0].month - 1]} / {data_referencia[0].year}", 
-            size=20, 
+            size=18, 
             weight=ft.FontWeight.BOLD,
             color=ft.colors.BLUE_200
         )
@@ -349,7 +385,7 @@ def main(page: ft.Page):
             tabela_detalhes = ft.DataTable(
                 columns=[
                     ft.DataColumn(ft.Text("Data")),
-                    ft.DataColumn(ft.Text("Empresa / Favorecido")),
+                    ft.DataColumn(ft.Text("Empresa")),
                     ft.DataColumn(ft.Text("Categoria")),
                     ft.DataColumn(ft.Text("Valor")),
                     ft.DataColumn(ft.Text("Ação")),
@@ -424,16 +460,16 @@ def main(page: ft.Page):
                         value=valor_total,
                         title=f"{porcentagem:.0f}%",
                         color=cor,
-                        radius=45,
-                        title_style=ft.TextStyle(size=12, weight=ft.FontWeight.BOLD, color=ft.colors.WHITE)
+                        radius=40,
+                        title_style=ft.TextStyle(size=11, weight=ft.FontWeight.BOLD, color=ft.colors.WHITE)
                     )
                 )
 
             tabela_categorias = ft.DataTable(
                 columns=[
                     ft.DataColumn(ft.Text("Categoria")),
-                    ft.DataColumn(ft.Text("Total Gasto")),
-                    ft.DataColumn(ft.Text("% do Mês")),
+                    ft.DataColumn(ft.Text("Total")),
+                    ft.DataColumn(ft.Text("%")),
                 ],
                 rows=linhas_categoria
             )
@@ -441,34 +477,33 @@ def main(page: ft.Page):
             grafico_pizza = ft.PieChart(
                 sections=secoes_grafico if secoes_grafico else [ft.PieChartSection(1, title="Sem dados", color=ft.colors.GREY_700)],
                 sections_space=2,
-                center_space_radius=40,
+                center_space_radius=30,
                 expand=True
             )
 
+            # Cards de resumo com clique
             card_entradas = ft.Container(
                 on_click=lambda _: abrir_detalhes_movimentacao("entrada", "Detalhamento de Entradas", ft.colors.GREEN_400),
                 ink=True,
                 content=ft.Card(
                     content=ft.Container(
                         ft.Column([
-                            ft.Text("Entradas do Mês (Clique)", size=12, color=ft.colors.GREY_400), 
-                            ft.Text(f"R$ {total_entradas:.2f}", size=18, color=ft.colors.GREEN_400, weight=ft.FontWeight.BOLD)
-                        ]), 
-                        padding=15
+                            ft.Text("Entradas (Clique)", size=11, color=ft.colors.GREY_400), 
+                            ft.Text(f"R$ {total_entradas:.2f}", size=16, color=ft.colors.GREEN_400, weight=ft.FontWeight.BOLD)
+                        ]), padding=12
                     )
                 )
             )
 
             card_saidas = ft.Container(
-                on_click=lambda _: abrir_detalhes_movimentacao("saida", "Detalhamento de Saídas/Gastos", ft.colors.RED_400),
+                on_click=lambda _: abrir_detalhes_movimentacao("saida", "Detalhamento de Saídas", ft.colors.RED_400),
                 ink=True,
                 content=ft.Card(
                     content=ft.Container(
                         ft.Column([
-                            ft.Text("Saídas do Mês (Clique)", size=12, color=ft.colors.GREY_400), 
-                            ft.Text(f"R$ {total_saidas:.2f}", size=18, color=ft.colors.RED_400, weight=ft.FontWeight.BOLD)
-                        ]), 
-                        padding=15
+                            ft.Text("Saídas (Clique)", size=11, color=ft.colors.GREY_400), 
+                            ft.Text(f"R$ {total_saidas:.2f}", size=16, color=ft.colors.RED_400, weight=ft.FontWeight.BOLD)
+                        ]), padding=12
                     )
                 )
             )
@@ -476,35 +511,44 @@ def main(page: ft.Page):
             card_saldo = ft.Card(
                 content=ft.Container(
                     ft.Column([
-                        ft.Text("Saldo do Mês", size=12, color=ft.colors.GREY_400), 
-                        ft.Text(f"R$ {saldo:.2f}", size=18, color=ft.colors.BLUE_400, weight=ft.FontWeight.BOLD)
-                    ]), 
-                    padding=15
+                        ft.Text("Saldo do Mês", size=11, color=ft.colors.GREY_400), 
+                        ft.Text(f"R$ {saldo:.2f}", size=16, color=ft.colors.BLUE_400, weight=ft.FontWeight.BOLD)
+                    ]), padding=12
                 )
             )
 
             container_dashboard.controls.clear()
             container_dashboard.controls.extend([
-                ft.Row([card_entradas, card_saidas, card_saldo], spacing=15),
+                # Cards do topo em grid adaptativo
+                ft.ResponsiveRow([
+                    ft.Column([card_entradas], col={"xs": 12, "sm": 4}),
+                    ft.Column([card_saidas], col={"xs": 12, "sm": 4}),
+                    ft.Column([card_saldo], col={"xs": 12, "sm": 4}),
+                ]),
                 ft.Divider(),
-                ft.Text(f"Gastos Por Categoria", size=18, weight=ft.FontWeight.BOLD),
-                ft.Row([
-                    ft.Container(content=tabela_categorias, expand=True),
-                    ft.Container(content=grafico_pizza, width=280, height=220, alignment=ft.alignment.center)
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+                ft.Text("Gastos Por Categoria", size=18, weight=ft.FontWeight.BOLD),
+                
+                # Tabela + Gráfico empilhados no celular
+                ft.ResponsiveRow([
+                    ft.Column([
+                        ft.ListView(controls=[tabela_categorias], expand=False)
+                    ], col={"xs": 12, "sm": 7}),
+                    ft.Column([
+                        ft.Container(content=grafico_pizza, height=200, alignment=ft.alignment.center)
+                    ], col={"xs": 12, "sm": 5}),
+                ])
             ])
             
             if page:
                 page.update()
 
-        # Funções para trocar de mês dinamicamente
+        # Navegação de Meses
         def mes_anterior(e):
             primeiro_dia = data_referencia[0].replace(day=1)
             data_referencia[0] = primeiro_dia - timedelta(days=1)
             atualizar_relatorio_mensal()
 
         def mes_seguinte(e):
-            # Salta para o primeiro dia do próximo mês
             proximo_mes = (data_referencia[0].replace(day=28) + timedelta(days=4)).replace(day=1)
             data_referencia[0] = proximo_mes
             atualizar_relatorio_mensal()
@@ -513,31 +557,41 @@ def main(page: ft.Page):
             data_referencia[0] = datetime.now()
             atualizar_relatorio_mensal()
 
-        # Barra de Navegação de Mês Dinâmica
         seletor_mes_dinamico = ft.Row([
             ft.IconButton(icon=ft.icons.CHEVRON_LEFT, tooltip="Mês Anterior", on_click=mes_anterior),
             texto_mes_ano,
             ft.IconButton(icon=ft.icons.CHEVRON_RIGHT, tooltip="Próximo Mês", on_click=mes_seguinte),
-            ft.OutlinedButton("Mês Atual", on_click=ir_para_mes_atual)
-        ], vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=10)
+            ft.OutlinedButton("Atual", on_click=ir_para_mes_atual)
+        ], vertical_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER, wrap=True)
 
         atualizar_relatorio_mensal()
 
         return ft.Container(
             content=ft.Column([
-                ft.Text("Relatório Mensal & Análise de Gastos", size=24, weight=ft.FontWeight.BOLD),
+                ft.Text("Relatório Mensal", size=22, weight=ft.FontWeight.BOLD),
                 seletor_mes_dinamico,
                 ft.Divider(),
                 container_dashboard
             ], spacing=15), 
-            padding=30
+            padding=15
         )
 
-    # Inicialização
+    # Inicialização da Layout da Página
     conteudo_central.controls.append(criar_tela_formulario())
-    page.add(ft.Row([barra_lateral, ft.VerticalDivider(width=1), conteudo_central], expand=True))
+    
+    # Renderização Adaptativa: Se for tela pequena usa navegação inferior, se for grande usa lateral
+    def reordenar_layout():
+        page.controls.clear()
+        if page.width and page.width < 600:
+            page.navigation_bar = barra_inferior
+            page.add(conteudo_central)
+        else:
+            page.navigation_bar = None
+            page.add(ft.Row([barra_lateral, ft.VerticalDivider(width=1), conteudo_central], expand=True))
+        page.update()
 
-import os
+    page.on_resize = lambda e: reordenar_layout()
+    reordenar_layout()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
