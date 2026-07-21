@@ -4,12 +4,11 @@ from datetime import datetime, timedelta
 import os
 
 # ==========================================
-# 1. BANCO DE DADOS (PERSISTÊNCIA & MEMÓRIA)
+# 1. BANCO DE DADOS
 # ==========================================
 def inicializar_banco():
     conexao = sqlite3.connect("banco_financeiro.db")
     cursor = conexao.cursor()
-    
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS lancamentos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,7 +19,6 @@ def inicializar_banco():
             empresa TEXT
         )
     """)
-    
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS empresas_cadastradas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,21 +66,18 @@ def buscar_empresas_salvas():
     return [r[0] for r in linhas]
 
 # ==========================================
-# 2. APLICAÇÃO VISUAL (FLET DASHBOARD RESPONSIVO)
+# 2. APLICAÇÃO VISUAL FLET WEB
 # ==========================================
 def main(page: ft.Page):
-    page.title = "Controle Financeiro Web"
+    page.title = "Controle Financeiro"
     page.theme_mode = ft.ThemeMode.DARK
     page.padding = 10
-    page.scroll = ft.ScrollMode.ADAPTIVE
+    page.scroll = ft.ScrollMode.AUTO
     
     inicializar_banco()
-
     data_hoje = datetime.now().strftime("%d/%m/%Y")
 
-    # ------------------------------------------
-    # CAMPOS DO FORMULÁRIO DE CADASTRO
-    # ------------------------------------------
+    # Campos
     input_data = ft.TextField(
         label="1. Data da Transação", 
         value=data_hoje, 
@@ -98,16 +93,6 @@ def main(page: ft.Page):
         ontem = datetime.now() - timedelta(days=1)
         input_data.value = ontem.strftime("%d/%m/%Y")
         input_data.update()
-
-    def data_selecionada_calendario(e):
-        if e.control.value:
-            input_data.value = e.control.value.strftime("%d/%m/%Y")
-            input_data.update()
-
-    date_picker = ft.DatePicker(on_change=data_selecionada_calendario)
-
-    def abrir_calendario(e):
-        page.open(date_picker)
 
     input_tipo = ft.Dropdown(
         label="2. Tipo de Movimentação",
@@ -165,9 +150,11 @@ def main(page: ft.Page):
         expand=True
     )
 
-    # ------------------------------------------
-    # SALVAMENTO
-    # ------------------------------------------
+    def mostrar_snack(mensagem):
+        page.snack_bar = ft.SnackBar(ft.Text(mensagem))
+        page.snack_bar.open = True
+        page.update()
+
     def executar_salvamento(e):
         try:
             empresa_valor = input_empresa.value.strip() if input_empresa.value else ""
@@ -211,31 +198,21 @@ def main(page: ft.Page):
         except Exception as erro:
             mostrar_snack(f"Erro ao salvar: {str(erro)}")
 
-    def mostrar_snack(mensagem):
-        page.snack_bar = ft.SnackBar(ft.Text(mensagem))
-        page.snack_bar.open = True
-        page.update()
-
-    # ------------------------------------------
-    # NAVEGAÇÃO
-    # ------------------------------------------
     def mudar_tela_interface(indice_aba):
         barra_lateral.selected_index = indice_aba
         barra_lateral.update()
 
         conteudo_central.controls.clear()
-        
         if indice_aba == 0:
             conteudo_central.controls.append(criar_tela_formulario())
         elif indice_aba == 1:
             conteudo_central.controls.append(criar_tela_relatorio())
-            
         page.update()
 
     barra_lateral = ft.NavigationRail(
         selected_index=0,
         label_type=ft.NavigationRailLabelType.ALL,
-        min_width=80,
+        min_width=70,
         destinations=[
             ft.NavigationRailDestination(icon=ft.icons.ADD_CARD, label="Novo"),
             ft.NavigationRailDestination(icon=ft.icons.ANALYTICS, label="Relatórios"),
@@ -245,25 +222,21 @@ def main(page: ft.Page):
 
     conteudo_central = ft.Column(expand=True, alignment=ft.MainAxisAlignment.START)
 
-    # ------------------------------------------
-    # TELA 1: CADASTRO RESPONSIVO
-    # ------------------------------------------
     def criar_tela_formulario():
         return ft.Container(
             content=ft.Column([
-                ft.Text("Novo Lançamento Financeiro", size=22, weight=ft.FontWeight.BOLD),
-                ft.Text("Preencha os dados da transação abaixo.", size=13, color=ft.colors.GREY_400),
+                ft.Text("Novo Lançamento Financeiro", size=20, weight=ft.FontWeight.BOLD),
+                ft.Text("Preencha os dados da transação abaixo.", size=12, color=ft.colors.GREY_400),
                 ft.Divider(),
                 
                 ft.ResponsiveRow([
-                    ft.Column([input_data], col={"xs": 12, "sm": 6}),
+                    ft.Column([input_data], col={"xs": 12, "sm": 7}),
                     ft.Column([
                         ft.Row([
                             ft.OutlinedButton("Hoje", on_click=set_data_hoje),
                             ft.OutlinedButton("Ontem", on_click=set_data_ontem),
-                            ft.IconButton(icon=ft.icons.CALENDAR_MONTH, on_click=abrir_calendario),
                         ], alignment=ft.MainAxisAlignment.START)
-                    ], col={"xs": 12, "sm": 6}),
+                    ], col={"xs": 12, "sm": 5}),
                 ]),
                 
                 ft.ResponsiveRow([
@@ -280,115 +253,40 @@ def main(page: ft.Page):
                     ft.Column([dropdown_empresas], col={"xs": 12, "sm": 5}),
                 ]),
                 
-                ft.Container(height=15),
+                ft.Container(height=10),
                 
                 ft.ResponsiveRow([
                     ft.Column([
                         ft.ElevatedButton(
-                            "Salvar e Arquivar Lançamento", 
+                            "Salvar Lançamento", 
                             icon=ft.icons.SAVE, 
                             style=ft.ButtonStyle(
                                 bgcolor=ft.colors.GREEN_700,
                                 color=ft.colors.WHITE,
-                                padding=20
+                                padding=15
                             ),
                             on_click=executar_salvamento,
                             width=1000
                         )
                     ], col={"xs": 12})
                 ])
-            ], spacing=15),
-            padding=15
+            ], spacing=12),
+            padding=10
         )
 
-    # ------------------------------------------
-    # TELA 2: RELATÓRIOS MENSAIS RESPONSIVOS
-    # ------------------------------------------
     def criar_tela_relatorio():
         data_referencia = [datetime.now()]
-
         meses_extenso = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
                          "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
         
         texto_mes_ano = ft.Text(
             f"{meses_extenso[data_referencia[0].month - 1]} / {data_referencia[0].year}", 
-            size=18, 
+            size=16, 
             weight=ft.FontWeight.BOLD,
             color=ft.colors.BLUE_200
         )
 
-        container_dashboard = ft.Column(spacing=20)
-
-        def abrir_detalhes_movimentacao(tipo_desejado, titulo_modal, cor_titulo):
-            mes_ano = data_referencia[0].strftime("%m/%Y")
-            
-            conexao = sqlite3.connect("banco_financeiro.db")
-            cursor = conexao.cursor()
-            cursor.execute("""
-                SELECT id, data, empresa, categoria, valor 
-                FROM lancamentos 
-                WHERE tipo = ? AND data LIKE ? 
-                ORDER BY id DESC
-            """, (tipo_desejado, f"%/{mes_ano}"))
-            
-            registros = cursor.fetchall()
-            conexao.close()
-
-            def fechar_dialogo(e):
-                dialog.open = False
-                page.update()
-
-            def remover_e_recarregar(e, reg_id):
-                deletar_lancamento(reg_id)
-                dialog.open = False
-                page.update()
-                atualizar_relatorio_mensal()
-                mostrar_snack("Lançamento excluído com sucesso!")
-
-            linhas_detalhes = []
-            for r_id, dt, emp, cat, val in registros:
-                linhas_detalhes.append(
-                    ft.DataRow(cells=[
-                        ft.DataCell(ft.Text(dt)),
-                        ft.DataCell(ft.Text(emp)),
-                        ft.DataCell(ft.Text(cat)),
-                        ft.DataCell(ft.Text(f"R$ {val:.2f}", color=cor_titulo, weight=ft.FontWeight.BOLD)),
-                        ft.DataCell(
-                            ft.IconButton(
-                                icon=ft.icons.DELETE, 
-                                icon_color=ft.colors.RED_400,
-                                tooltip="Excluir Lançamento",
-                                on_click=lambda e, id_act=r_id: remover_e_recarregar(e, id_act)
-                            )
-                        )
-                    ])
-                )
-
-            tabela_detalhes = ft.DataTable(
-                columns=[
-                    ft.DataColumn(ft.Text("Data")),
-                    ft.DataColumn(ft.Text("Empresa")),
-                    ft.DataColumn(ft.Text("Categoria")),
-                    ft.DataColumn(ft.Text("Valor")),
-                    ft.DataColumn(ft.Text("Ação")),
-                ],
-                rows=linhas_detalhes
-            )
-
-            dialog = ft.AlertDialog(
-                title=ft.Text(f"{titulo_modal} ({mes_ano})", color=cor_titulo, weight=ft.FontWeight.BOLD),
-                content=ft.Container(
-                    content=ft.ListView(controls=[tabela_detalhes], expand=True),
-                    width=650,
-                    height=350,
-                ),
-                actions=[
-                    ft.TextButton("Fechar", on_click=fechar_dialogo)
-                ],
-                actions_alignment=ft.MainAxisAlignment.END,
-            )
-
-            page.open(dialog)
+        container_dashboard = ft.Column(spacing=15)
 
         def atualizar_relatorio_mensal():
             mes_ano = data_referencia[0].strftime("%m/%Y")
@@ -396,14 +294,12 @@ def main(page: ft.Page):
             
             conexao = sqlite3.connect("banco_financeiro.db")
             cursor = conexao.cursor()
-            
             cursor.execute("""
                 SELECT tipo, categoria, valor, empresa, data 
                 FROM lancamentos 
                 WHERE data LIKE ? 
                 ORDER BY id DESC
             """, (f"%/{mes_ano}",))
-            
             registros = cursor.fetchall()
             conexao.close()
 
@@ -417,34 +313,14 @@ def main(page: ft.Page):
                     gastos_por_categoria[cat] = gastos_por_categoria.get(cat, 0.0) + val
 
             linhas_categoria = []
-            secoes_grafico = []
-            
-            cores_grafico = [
-                ft.colors.BLUE_400, ft.colors.RED_400, ft.colors.GREEN_400, 
-                ft.colors.ORANGE_400, ft.colors.PURPLE_400, ft.colors.CYAN_400, 
-                ft.colors.PINK_400, ft.colors.YELLOW_400
-            ]
-
-            for index, (cat, valor_total) in enumerate(gastos_por_categoria.items()):
-                cor = cores_grafico[index % len(cores_grafico)]
+            for cat, valor_total in gastos_por_categoria.items():
                 porcentagem = (valor_total / total_saidas * 100) if total_saidas > 0 else 0
-                
                 linhas_categoria.append(
                     ft.DataRow(cells=[
                         ft.DataCell(ft.Text(cat, weight=ft.FontWeight.BOLD)),
                         ft.DataCell(ft.Text(f"R$ {valor_total:.2f}")),
-                        ft.DataCell(ft.Text(f"{porcentagem:.1f}%", color=cor)),
+                        ft.DataCell(ft.Text(f"{porcentagem:.1f}%")),
                     ])
-                )
-
-                secoes_grafico.append(
-                    ft.PieChartSection(
-                        value=valor_total,
-                        title=f"{porcentagem:.0f}%",
-                        color=cor,
-                        radius=40,
-                        title_style=ft.TextStyle(size=11, weight=ft.FontWeight.BOLD, color=ft.colors.WHITE)
-                    )
                 )
 
             tabela_categorias = ft.DataTable(
@@ -456,45 +332,30 @@ def main(page: ft.Page):
                 rows=linhas_categoria
             )
 
-            grafico_pizza = ft.PieChart(
-                sections=secoes_grafico if secoes_grafico else [ft.PieChartSection(1, title="Sem dados", color=ft.colors.GREY_700)],
-                sections_space=2,
-                center_space_radius=30,
-                expand=True
-            )
-
-            card_entradas = ft.Container(
-                on_click=lambda _: abrir_detalhes_movimentacao("entrada", "Detalhamento de Entradas", ft.colors.GREEN_400),
-                ink=True,
-                content=ft.Card(
-                    content=ft.Container(
-                        ft.Column([
-                            ft.Text("Entradas (Clique)", size=11, color=ft.colors.GREY_400), 
-                            ft.Text(f"R$ {total_entradas:.2f}", size=16, color=ft.colors.GREEN_400, weight=ft.FontWeight.BOLD)
-                        ]), padding=12
-                    )
+            card_entradas = ft.Card(
+                content=ft.Container(
+                    ft.Column([
+                        ft.Text("Entradas", size=11, color=ft.colors.GREY_400), 
+                        ft.Text(f"R$ {total_entradas:.2f}", size=15, color=ft.colors.GREEN_400, weight=ft.FontWeight.BOLD)
+                    ]), padding=10
                 )
             )
 
-            card_saidas = ft.Container(
-                on_click=lambda _: abrir_detalhes_movimentacao("saida", "Detalhamento de Saídas", ft.colors.RED_400),
-                ink=True,
-                content=ft.Card(
-                    content=ft.Container(
-                        ft.Column([
-                            ft.Text("Saídas (Clique)", size=11, color=ft.colors.GREY_400), 
-                            ft.Text(f"R$ {total_saidas:.2f}", size=16, color=ft.colors.RED_400, weight=ft.FontWeight.BOLD)
-                        ]), padding=12
-                    )
+            card_saidas = ft.Card(
+                content=ft.Container(
+                    ft.Column([
+                        ft.Text("Saídas", size=11, color=ft.colors.GREY_400), 
+                        ft.Text(f"R$ {total_saidas:.2f}", size=15, color=ft.colors.RED_400, weight=ft.FontWeight.BOLD)
+                    ]), padding=10
                 )
             )
 
             card_saldo = ft.Card(
                 content=ft.Container(
                     ft.Column([
-                        ft.Text("Saldo do Mês", size=11, color=ft.colors.GREY_400), 
-                        ft.Text(f"R$ {saldo:.2f}", size=16, color=ft.colors.BLUE_400, weight=ft.FontWeight.BOLD)
-                    ]), padding=12
+                        ft.Text("Saldo", size=11, color=ft.colors.GREY_400), 
+                        ft.Text(f"R$ {saldo:.2f}", size=15, color=ft.colors.BLUE_400, weight=ft.FontWeight.BOLD)
+                    ]), padding=10
                 )
             )
 
@@ -506,16 +367,8 @@ def main(page: ft.Page):
                     ft.Column([card_saldo], col={"xs": 12, "sm": 4}),
                 ]),
                 ft.Divider(),
-                ft.Text("Gastos Por Categoria", size=18, weight=ft.FontWeight.BOLD),
-                
-                ft.ResponsiveRow([
-                    ft.Column([
-                        ft.ListView(controls=[tabela_categorias], expand=False)
-                    ], col={"xs": 12, "sm": 7}),
-                    ft.Column([
-                        ft.Container(content=grafico_pizza, height=200, alignment=ft.alignment.center)
-                    ], col={"xs": 12, "sm": 5}),
-                ])
+                ft.Text("Gastos Por Categoria", size=16, weight=ft.FontWeight.BOLD),
+                ft.ListView(controls=[tabela_categorias], expand=False)
             ])
             
             if page:
@@ -531,27 +384,22 @@ def main(page: ft.Page):
             data_referencia[0] = proximo_mes
             atualizar_relatorio_mensal()
 
-        def ir_para_mes_atual(e):
-            data_referencia[0] = datetime.now()
-            atualizar_relatorio_mensal()
-
         seletor_mes_dinamico = ft.Row([
-            ft.IconButton(icon=ft.icons.CHEVRON_LEFT, tooltip="Mês Anterior", on_click=mes_anterior),
+            ft.IconButton(icon=ft.icons.CHEVRON_LEFT, on_click=mes_anterior),
             texto_mes_ano,
-            ft.IconButton(icon=ft.icons.CHEVRON_RIGHT, tooltip="Próximo Mês", on_click=mes_seguinte),
-            ft.OutlinedButton("Atual", on_click=ir_para_mes_atual)
-        ], vertical_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER, wrap=True)
+            ft.IconButton(icon=ft.icons.CHEVRON_RIGHT, on_click=mes_seguinte),
+        ], vertical_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER)
 
         atualizar_relatorio_mensal()
 
         return ft.Container(
             content=ft.Column([
-                ft.Text("Relatório Mensal", size=22, weight=ft.FontWeight.BOLD),
+                ft.Text("Relatório Mensal", size=20, weight=ft.FontWeight.BOLD),
                 seletor_mes_dinamico,
                 ft.Divider(),
                 container_dashboard
-            ], spacing=15), 
-            padding=15
+            ], spacing=12), 
+            padding=10
         )
 
     conteudo_central.controls.append(criar_tela_formulario())

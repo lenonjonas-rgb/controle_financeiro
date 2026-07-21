@@ -1,4 +1,2 @@
 flet==0.23.2
 gunicorn
-google-genai
-pillow
