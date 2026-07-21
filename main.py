@@ -71,7 +71,7 @@ def buscar_empresas_salvas():
 # 2. APLICAÇÃO VISUAL (FLET DASHBOARD RESPONSIVO)
 # ==========================================
 def main(page: ft.Page):
-    page.title = "Controle Financeiro - Gestão & Gráficos"
+    page.title = "Controle Financeiro Web"
     page.theme_mode = ft.ThemeMode.DARK
     page.padding = 10
     page.scroll = ft.ScrollMode.ADAPTIVE
@@ -105,7 +105,9 @@ def main(page: ft.Page):
             input_data.update()
 
     date_picker = ft.DatePicker(on_change=data_selecionada_calendario)
-    page.overlay.append(date_picker)
+
+    def abrir_calendario(e):
+        page.open(date_picker)
 
     input_tipo = ft.Dropdown(
         label="2. Tipo de Movimentação",
@@ -259,7 +261,7 @@ def main(page: ft.Page):
                         ft.Row([
                             ft.OutlinedButton("Hoje", on_click=set_data_hoje),
                             ft.OutlinedButton("Ontem", on_click=set_data_ontem),
-                            ft.IconButton(icon=ft.icons.CALENDAR_MONTH, on_click=lambda _: date_picker.pick_date()),
+                            ft.IconButton(icon=ft.icons.CALENDAR_MONTH, on_click=abrir_calendario),
                         ], alignment=ft.MainAxisAlignment.START)
                     ], col={"xs": 12, "sm": 6}),
                 ]),
@@ -552,7 +554,6 @@ def main(page: ft.Page):
             padding=15
         )
 
-    # Inicialização Estável para Web
     conteudo_central.controls.append(criar_tela_formulario())
     
     page.add(
