@@ -19,6 +19,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android Licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -29,20 +35,17 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "flet[cli]" pillow google-genai
+          pip install flet pillow google-genai
 
-      - name: Create Flutter App and Bundle Python
+      - name: Build APK with Flet
         run: |
-          flet create --template app temp_app
-          cp -r . temp_app/
-          cd temp_app
-          flutter build apk --release
+          flet build apk --verbose
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: controle-financeiro-apk
-          path: temp_app/build/app/outputs/flutter-apk/app-release.apk
+          path: build/apk/*.apk
