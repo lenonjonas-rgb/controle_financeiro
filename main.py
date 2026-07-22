@@ -2,6 +2,7 @@ import flet as ft
 import sqlite3
 from datetime import datetime, timedelta
 import os
+import flet_fastapi
 
 # ==========================================
 # 1. BANCO DE DADOS
@@ -414,11 +415,10 @@ def main(page: ft.Page):
         )
     )
 
+# Exportação oficial do aplicativo para a Web usando FastAPI/Uvicorn
+app = flet_fastapi.app(main)
+
 if __name__ == "__main__":
+    import uvicorn
     port = int(os.environ.get("PORT", 8080))
-    ft.app(
-        target=main, 
-        view=ft.AppView.WEB_BROWSER, 
-        port=port, 
-        host="0.0.0.0"
-    )
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
