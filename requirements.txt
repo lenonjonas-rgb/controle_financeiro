@@ -1,4 +1,4 @@
-flet==0.23.2
-fastapi
+flet
 flet-fastapi
+fastapi
 uvicorn
