@@ -415,7 +415,6 @@ def main(page: ft.Page):
         )
     )
 
-# Exportação oficial do aplicativo para a Web usando FastAPI/Uvicorn
 app = flet_fastapi.app(main)
 
 if __name__ == "__main__":
