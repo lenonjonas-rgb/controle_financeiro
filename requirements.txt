@@ -2,3 +2,5 @@ flet
 flet-fastapi
 fastapi
 uvicorn
+httpx
+httpcore
