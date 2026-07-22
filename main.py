@@ -69,7 +69,7 @@ def buscar_empresas_salvas():
 # 2. APLICAÇÃO VISUAL FLET WEB
 # ==========================================
 def main(page: ft.Page):
-    page.title = "Controle Financeiro"
+    page.title = "Controle Financeiro Web"
     page.theme_mode = ft.ThemeMode.DARK
     page.padding = 10
     page.scroll = ft.ScrollMode.AUTO
@@ -77,7 +77,6 @@ def main(page: ft.Page):
     inicializar_banco()
     data_hoje = datetime.now().strftime("%d/%m/%Y")
 
-    # Campos
     input_data = ft.TextField(
         label="1. Data da Transação", 
         value=data_hoje, 
@@ -415,11 +414,9 @@ def main(page: ft.Page):
         )
     )
 
+app = ft.app(target=main, export_to_web=True)
+
 if __name__ == "__main__":
+    import uvicorn
     port = int(os.environ.get("PORT", 8080))
-    ft.app(
-        target=main, 
-        view=ft.AppView.WEB_BROWSER, 
-        port=port, 
-        host="0.0.0.0"
-    )
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
